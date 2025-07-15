@@ -54,10 +54,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String username =  principal.getAttribute(UserServiceImpl.OAUTH_ATTR_USERNAME);
         String email = principal.getAttribute(UserServiceImpl.OAUTH_ATTR_EMAIL);
         String registrationId = token.getAuthorizedClientRegistrationId();
-        String uploadResponse = cloudinaryService.uploadImage(Objects.requireNonNull(principal.getAttribute("picture")));
 
         if (!userRepository.existsByEmail(email)) {
             OAuth2UserEntity oAuth2User = new OAuth2UserEntity(principal.getAttribute("sub"), registrationId);
+            String uploadResponse = cloudinaryService.uploadImage(Objects.requireNonNull(principal.getAttribute("picture")));
             User user = new User(username, email);
             user.setAvatar(uploadResponse);
             user.setOauth2User(oAuth2User);

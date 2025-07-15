@@ -1,6 +1,7 @@
 package com.example.demo.filter;
 
 import com.example.demo.controller.SecurityController;
+import com.example.demo.exception.CookieException;
 import com.example.demo.mapper.AuthTokenStorage;
 import com.example.demo.mapper.TokenValidationResult;
 import com.example.demo.configuration.CookieConfigure;
@@ -30,8 +31,11 @@ import org.springframework.security.oauth2.client.ClientAuthorizationRequiredExc
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -42,6 +46,8 @@ import java.util.Objects;
 @Slf4j
 @Component
 public class OAuth2TokenFilter extends OncePerRequestFilter {
+    private static final RequestMatcher SKIP_OAUTH2 = new AntPathRequestMatcher(OAuth2LoginAuthenticationFilter.DEFAULT_FILTER_PROCESSES_URI);
+
     private final JwtService jwtService;
     private final ApplicationContext applicationContext;
 
@@ -58,36 +64,31 @@ public class OAuth2TokenFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return SKIP_OAUTH2.matches(request);
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-//        if (request.getRequestURI().startsWith(SecurityController.URI_SECURED) ) {
-        if (request.getRequestURI().startsWith("/public")) {
+        try {
+            Claims claims = jwtService.extractClaimsAndTokens(request, response);
+            jwtFromCookie(claims);
             filterChain.doFilter(request, response);
-            return;
+        } catch (CookieException ex) {
+            log.error("Cookie exception: {}", ex.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Missing cookies which contains token");
+        } catch (JwtException ex) {
+            log.error("JWT exception during authentication from cookie: {}", ex.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Invalid or missing token");
+        } catch (ClientAuthorizationRequiredException ex) {
+            log.error("Client authorization exception: {}", ex.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Client auth required");
+        } catch (Exception ex) {
+            log.error("JWT authentication failed: {}", ex.getMessage());
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Authentication failed");
         }
-        if (request.getRequestURI().startsWith("/login/oauth2/code/google")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
 
-            try {
-                Claims claims = jwtService.extractClaimsAndTokens(request, response);
-                jwtFromCookie(claims);
-
-            } catch (JwtException ex) {
-                log.error("JWT exception during authentication from cookie: {}", ex.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Invalid or missing token");
-            } catch (ClientAuthorizationRequiredException ex) {
-                log.error("Client authorization exception: {}", ex.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Client auth required");
-            } catch (Exception ex) {
-                log.error("JWT authentication failed: {}", ex.getMessage());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized: Authentication failed");
-            }
-            finally {
-                filterChain.doFilter(request, response);
-            }
-//        }
 
         log.info(request.getRequestURI());
     }

@@ -3,9 +3,12 @@ package com.example.demo.service.impl;
 
 import com.example.demo.configuration.CookieConfigure;
 import com.example.demo.dto.UserDto;
+import com.example.demo.exception.CookieException;
 import com.example.demo.exception.UnauthorizedException;
 import com.example.demo.mapper.AuthTokenStorage;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,7 +18,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
@@ -92,7 +94,7 @@ public class JwtService {
 
     public Claims extractClaimsAndTokens(HttpServletRequest request, HttpServletResponse response) throws UnauthorizedException {
         Cookie[] cookies = request.getCookies();
-        if (cookies == null) throw new UnauthorizedException("Cookie is missing");
+        if (cookies == null) throw new CookieException("Cookie is missing");
 
         String accessToken = CookieConfigure.getCookie(cookies, CookieConfigure.COOKIE_OAUTH_ACCESS_TOKEN)
                 .orElseGet(() -> {
@@ -100,7 +102,7 @@ public class JwtService {
                     return null;
                 });
         String refreshToken = CookieConfigure.getCookie(cookies, CookieConfigure.COOKIE_OAUTH_REFRESH_TOKEN)
-                .orElseThrow(() -> new UnauthorizedException("cookie with refresh token doesn't exists"));
+                .orElseThrow(() -> new CookieException("cookie with refresh token doesn't exists"));
 
 
         AuthTokenStorage tokenStorage = new AuthTokenStorage(accessToken, refreshToken);
@@ -151,8 +153,7 @@ public class JwtService {
         }
     }
 
-
     private SecretKey decodeKey() {
-        return new SecretKeySpec(hs256SecretKey.getBytes(), SignatureAlgorithm.HS256.getJcaName());
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(hs256SecretKey));
     }
 }

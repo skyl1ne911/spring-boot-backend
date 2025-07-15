@@ -96,14 +96,8 @@ public class SecurityController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
-
-//            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//            logoutSuccessHandler.onLogoutSuccess(request, response, authentication);
+    public ResponseEntity<String> logout() {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body("You have logged out");
-    
-//        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
-
     }
 
 }

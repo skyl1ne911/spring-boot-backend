@@ -25,7 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/public")
 public class UserController {
-    public static final String HOME_PAGE = "/public/home";
+    public static final String HOME_PAGE = "/web";
 
     @Autowired
     private UserRepository userRepository;

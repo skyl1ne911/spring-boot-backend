@@ -232,7 +232,7 @@ public class SecurityConfig {
 
     private Consumer<OAuth2AuthorizationRequest.Builder> authorizationRequestCustomizer() {
         return customizer -> customizer
-                .additionalParameters(Map.of("prompt", "consent", "access_type", "offline"));
+                .additionalParameters(Map.of("prompt", "none", "access_type", "offline"));
     }
 
 }
